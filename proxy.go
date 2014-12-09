@@ -18,7 +18,7 @@ type Proxy struct {
 	} `json:"alter_list"`
 }
 
-func LoadProxyFromConfig(config ...string) Proxy {
+func LoadFromConfig(out interface{}, config ...string) error {
 	var err error
 	var file *os.File
 	var config_file = "config.json"
@@ -29,27 +29,30 @@ func LoadProxyFromConfig(config ...string) Proxy {
 
 	if file, err = os.Open(config_file); err != nil {
 		log.Println("Failed to open config file:")
-		log.Fatal(err)
-		os.Exit(1)
+		return err
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
+
+	if err = decoder.Decode(out); err != nil {
+		log.Println("Failed to decode JSON config file:")
+		return err
+	}
+	return nil
+}
+
+func main() {
+	var err error
 	proxy := Proxy{}
 
-	if err = decoder.Decode(&proxy); err != nil {
-		log.Println("Failed to decode JSON config file:")
+	err = LoadFromConfig(&proxy)
+	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 
-	return proxy
-}
-
-func main() {
-
-	proxy := LoadProxyFromConfig()
-	err := StartProxy(&proxy)
+	err = StartProxy(&proxy)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
