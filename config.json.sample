@@ -1,0 +1,11 @@
+{
+    "listening_port": "8080",
+    "target_url": "http://stackoverflow.com",
+    "alter_list": [
+        {
+            "uri": "/building-a-web-server-in-go/",
+            "from_method": "GET",
+            "to_method": "POST"
+        }
+    ]
+}

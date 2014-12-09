@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -8,16 +9,46 @@ import (
 )
 
 type Proxy struct {
-	target_url     string
-	listening_port string
+	ListeningPort string `json:"listening_port"`
+	TargetUrl     string `json:"target_url"`
+	AlterList     []struct {
+		URI        string `json:"uri"`
+		FromMethod string `json:"from_method"`
+		ToMethod   string `json:"to_method"`
+	} `json:"alter_list"`
+}
+
+func LoadProxyFromConfig(config ...string) Proxy {
+	var err error
+	var file *os.File
+	var config_file = "config.json"
+
+	if len(config) > 0 {
+		config_file = config[0]
+	}
+
+	if file, err = os.Open(config_file); err != nil {
+		log.Println("Failed to open config file:")
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	proxy := Proxy{}
+
+	if err = decoder.Decode(&proxy); err != nil {
+		log.Println("Failed to decode JSON config file:")
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	return proxy
 }
 
 func main() {
 
-	proxy := Proxy{
-		target_url:     "http://stackoverflow.com",
-		listening_port: "8080",
-	}
+	proxy := LoadProxyFromConfig()
 	err := StartProxy(&proxy)
 	if err != nil {
 		log.Fatal(err)
@@ -28,9 +59,9 @@ func main() {
 func StartProxy(p *Proxy) error {
 
 	http.HandleFunc("/", p.ProxyRequest)
-	log.Println("Started GO proxyserver on port", p.listening_port)
+	log.Println("Started GO proxyserver on port", p.ListeningPort)
 
-	err := http.ListenAndServe("127.0.0.1:"+p.listening_port, nil)
+	err := http.ListenAndServe("127.0.0.1:"+p.ListeningPort, nil)
 	if err != nil {
 		return err
 	}
@@ -39,7 +70,7 @@ func StartProxy(p *Proxy) error {
 
 func (p *Proxy) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 
-	uri := p.target_url + r.RequestURI
+	uri := p.TargetUrl + r.RequestURI
 	log.Println(r.Method + ": " + uri)
 
 	p.MethodHandler(r)
