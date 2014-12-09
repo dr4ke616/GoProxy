@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dr4ke616/go_method/server"
+	"github.com/dr4ke616/GoProxy/server"
 	"log"
 	"os"
 )
