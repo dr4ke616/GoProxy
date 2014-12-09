@@ -8,25 +8,29 @@ import (
 )
 
 type Target struct {
-	URL string
+	URL            string
+	listening_port string
 }
 
 func main() {
 
-	target := Target{URL: "http://stackoverflow.com"}
-	err := StartServer(&target, "8080")
+	target := Target{
+		URL:            "http://stackoverflow.com",
+		listening_port: "8080",
+	}
+	err := StartServer(&target)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 }
 
-func StartServer(t *Target, listening_port string) error {
+func StartServer(t *Target) error {
 
 	http.HandleFunc("/", t.ProxyRequest)
-	log.Println("Started GO proxyserver on port", listening_port)
+	log.Println("Started GO proxyserver on port", t.listening_port)
 
-	err := http.ListenAndServe("127.0.0.1:"+listening_port, nil)
+	err := http.ListenAndServe("127.0.0.1:"+t.listening_port, nil)
 	if err != nil {
 		return err
 	}
