@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,17 +12,18 @@ type Target struct {
 }
 
 func main() {
-	log.Fatal(StartServer("http://stackoverflow.com"))
+
+	target := Target{URL: "http://stackoverflow.com"}
+	err := StartServer(&target, "8080")
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 }
 
-func StartServer(target_url string, port ...string) error {
-	var listening_port = "8080"
-	if len(port) > 0 {
-		listening_port = port[0]
-	}
+func StartServer(t *Target, listening_port string) error {
 
-	target := Target{URL: target_url}
-	http.HandleFunc("/", target.ProxyRequest)
+	http.HandleFunc("/", t.ProxyRequest)
 	log.Println("Started GO proxyserver on port", listening_port)
 
 	err := http.ListenAndServe("127.0.0.1:"+listening_port, nil)
@@ -36,7 +36,7 @@ func StartServer(target_url string, port ...string) error {
 func (t *Target) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 
 	uri := t.URL + r.RequestURI
-	fmt.Println(r.Method + ": " + uri)
+	log.Println(r.Method + ": " + uri)
 
 	t.MethodHandler(r)
 
@@ -68,7 +68,7 @@ func (t *Target) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 
 func (t *Target) MethodHandler(r *http.Request) {
 	if r.Method == "POST" {
-		fmt.Printf("Method is POST:")
+		log.Printf("Method is POST:")
 	}
 }
 
@@ -87,7 +87,6 @@ func (t *Target) Query(r *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Resp-Headers: %v\n", resp.Header)
 
 	return resp, nil
 }
