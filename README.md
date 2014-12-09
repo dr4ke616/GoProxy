@@ -1,4 +1,4 @@
 
-#GoMethod
+#GoProxy
 
-Simple Go HTTP request method proxy
+Simple HTTP proxy written in Go
