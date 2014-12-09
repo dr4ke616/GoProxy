@@ -1,7 +1,6 @@
-package main
+package server
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,47 +15,6 @@ type Proxy struct {
 		FromMethod string `json:"from_method"`
 		ToMethod   string `json:"to_method"`
 	} `json:"alter_list"`
-}
-
-func LoadFromConfig(out interface{}, config ...string) error {
-	var err error
-	var file *os.File
-	var config_file = "config.json"
-
-	if len(config) > 0 {
-		config_file = config[0]
-	}
-
-	if file, err = os.Open(config_file); err != nil {
-		log.Println("Failed to open config file:")
-		return err
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-
-	if err = decoder.Decode(out); err != nil {
-		log.Println("Failed to decode JSON config file:")
-		return err
-	}
-	return nil
-}
-
-func main() {
-	var err error
-	proxy := Proxy{}
-
-	err = LoadFromConfig(&proxy)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-
-	err = StartProxy(&proxy)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
 }
 
 func StartProxy(p *Proxy) error {
