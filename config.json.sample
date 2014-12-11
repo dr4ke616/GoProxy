@@ -1,7 +1,7 @@
 {
     "listening_port": "8080",
     "target_url": "http://stackoverflow.com",
-    "alter_list": [
+    "routing_options": [
         {
             "uri": "/building-a-web-server-in-go/",
             "from_method": "GET",
