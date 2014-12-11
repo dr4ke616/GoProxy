@@ -5,7 +5,8 @@
         {
             "uri": "/building-a-web-server-in-go/",
             "from_method": "GET",
-            "to_method": "POST"
+            "to_method": "PUT",
+            "custom_headers": {"Content-Type": "application/json"}
         }
     ]
 }

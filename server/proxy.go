@@ -11,16 +11,17 @@ type Proxy struct {
 	ListeningPort  string `json:"listening_port"`
 	TargetUrl      string `json:"target_url"`
 	RoutingOptions []struct {
-		URI           string   `json:"uri"`
-		FromMethod    string   `json:"from_method"`
-		ToMethod      string   `json:"to_method"`
-		CustomHeaders []string `json:"custom_headers"`
+		URI           string            `json:"uri"`
+		FromMethod    string            `json:"from_method"`
+		ToMethod      string            `json:"to_method"`
+		CustomHeaders map[string]string `json:"custom_headers"`
 	} `json:"routing_options"`
 }
 
-type MethodHandler struct {
+type RouteHandler struct {
 	FromMethod, ToMethod string
-	CustomHeaders        []string
+	CustomHeaders        map[string]string
+	Proxy                *Proxy
 }
 
 type Handler interface {
@@ -31,10 +32,11 @@ func StartProxy(p *Proxy) error {
 
 	for _, route := range p.RoutingOptions {
 		log.Println("Adding custom handler for URI", route.URI)
-		handler := MethodHandler{
+		handler := RouteHandler{
 			FromMethod:    route.FromMethod,
 			ToMethod:      route.ToMethod,
 			CustomHeaders: route.CustomHeaders,
+			Proxy:         p,
 		}
 		http.Handle(route.URI, Handler(handler))
 	}
@@ -48,9 +50,17 @@ func StartProxy(p *Proxy) error {
 	return nil
 }
 
-func (mh MethodHandler) ServeHTTP(http.ResponseWriter, *http.Request) {
-	log.Println("FromMethod", mh.FromMethod)
-	log.Println("ToMethod", mh.ToMethod)
+func (h RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == h.FromMethod {
+		r.Method = h.ToMethod
+	}
+
+	for key, value := range h.CustomHeaders {
+		r.Header.Add(key, value)
+	}
+
+	h.Proxy.ProxyRequest(w, r)
 }
 
 func (p *Proxy) ProxyRequest(w http.ResponseWriter, r *http.Request) {
@@ -58,33 +68,33 @@ func (p *Proxy) ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	uri := p.TargetUrl + r.RequestURI
 	log.Println(r.Method + ": " + uri)
 
-	remote_request, err := p.CreateRemoteRequest(r, uri)
+	remote_request, err := CreateRemoteRequest(r, uri)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
-	p.CopyHeader(r.Header, &remote_request.Header)
+	CopyHeader(r.Header, &remote_request.Header)
 
-	resp, err := p.Query(remote_request)
+	resp, err := Query(remote_request)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-	body, err := p.ReadBody(resp)
+	body, err := ReadBody(resp)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
 	}
 
 	destination_header := w.Header()
-	p.CopyHeader(resp.Header, &destination_header)
+	CopyHeader(resp.Header, &destination_header)
 	destination_header.Add("Requested-Host", remote_request.Host)
 	w.Write(body)
 }
 
-func (p *Proxy) CreateRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
+func CreateRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
 	rr, err := http.NewRequest(r.Method, uri, r.Body)
 	if err != nil {
 		return nil, err
@@ -92,7 +102,7 @@ func (p *Proxy) CreateRemoteRequest(r *http.Request, uri string) (*http.Request,
 	return rr, nil
 }
 
-func (p *Proxy) Query(r *http.Request) (*http.Response, error) {
+func Query(r *http.Request) (*http.Response, error) {
 	// Create a client and query the target
 	var transport http.Transport
 	resp, err := transport.RoundTrip(r)
@@ -102,7 +112,7 @@ func (p *Proxy) Query(r *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func (p *Proxy) ReadBody(r *http.Response) ([]byte, error) {
+func ReadBody(r *http.Response) ([]byte, error) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -110,7 +120,7 @@ func (p *Proxy) ReadBody(r *http.Response) ([]byte, error) {
 	return body, nil
 }
 
-func (p *Proxy) CopyHeader(source http.Header, dest *http.Header) {
+func CopyHeader(source http.Header, dest *http.Header) {
 	for n, v := range source {
 		for _, vv := range v {
 			dest.Add(n, vv)
