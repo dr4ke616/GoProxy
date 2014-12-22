@@ -1,12 +1,29 @@
 {
-    "listening_port": "8080",
-    "target_url": "http://stackoverflow.com",
+    "listening_port": "8088",
+    "target_url": "http://localhost:8080",
     "routing_options": [
         {
-            "uri": "/building-a-web-server-in-go/",
+            "uri": "/api/",
             "from_method": "GET",
-            "to_method": "PUT",
-            "custom_headers": {"Content-Type": "application/json"}
+            "to_method": "POST",
+            "custom_headers": [
+                {
+                    "replace": true,
+                    "header_key": "Accept",
+                    "header_values": [
+                        "application/json",
+                        "text/plain"
+                    ]
+                },
+                {
+                    "replace": false,
+                    "header_key": "Content-Type",
+                    "header_values": [
+                        "application/json",
+                        "text/plain"
+                    ]
+                }
+            ]
         }
     ]
 }
