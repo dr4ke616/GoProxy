@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// Parses the config file
 func LoadFromConfig(out interface{}, config ...string) error {
 	var err error
 	var file *os.File
