@@ -1,12 +1,15 @@
 package server
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 )
+
+var ALLOWED_METHODS = [4]string{"GET", "POST", "PUT", "PATCH"}
 
 // Struct to defin the config file. Represented using JSON
 type Proxy struct {
@@ -45,6 +48,16 @@ func StartProxy(p *Proxy) error {
 
 	// Handle the custom routing options
 	for _, route := range p.RoutingOptions {
+		var err error
+
+		if err = ValidateMethod(route.FromMethod); err != nil {
+			return err
+		}
+
+		if err = ValidateMethod(route.ToMethod); err != nil {
+			return err
+		}
+
 		log.Println("Adding custom handler for URI", route.URI)
 		handler := RouteHandler{
 			FromMethod:    route.FromMethod,
@@ -72,12 +85,10 @@ func StartProxy(p *Proxy) error {
 	return nil
 }
 
-// Handele the incomeing requests and re-route to the target
+// Handle the incomeing requests and re-route to the target
 func (h RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method == h.FromMethod {
-		r.Method = h.ToMethod
-	}
+	h.HandleCustomMethod(r)
 
 	uri := h.Proxy.TargetUrl + r.RequestURI
 	log.Println(r.Method + ": " + uri)
@@ -108,6 +119,18 @@ func (h RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	destination_header.Add("Requested-Host", remote_request.Host)
 	h.HandleCustomHeaders(&destination_header)
 	w.Write(body)
+}
+
+// Switches the method type as specified in the config
+func (h RouteHandler) HandleCustomMethod(r *http.Request) {
+
+	if h.FromMethod == "" || h.ToMethod == "" {
+		return
+	}
+
+	if r.Method == h.FromMethod {
+		r.Method = h.ToMethod
+	}
 }
 
 // Handles any custom headers that are specified in the config
@@ -157,6 +180,7 @@ func ReadBody(r *http.Response) ([]byte, error) {
 	return body, nil
 }
 
+// Used to copy headers from the target to the client
 func CopyHeader(source http.Header, dest *http.Header) {
 
 	for n, v := range source {
@@ -164,4 +188,16 @@ func CopyHeader(source http.Header, dest *http.Header) {
 			dest.Add(n, vv)
 		}
 	}
+}
+
+// Verify the methods are correct
+func ValidateMethod(method string) error {
+
+	for _, m := range ALLOWED_METHODS {
+		if method == m {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Method type %s is not allowed", method)
 }
