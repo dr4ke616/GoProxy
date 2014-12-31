@@ -13,6 +13,7 @@ var ALLOWED_METHODS = [4]string{"GET", "POST", "PUT", "PATCH"}
 
 // Struct to defin the config file. Represented using JSON
 type Proxy struct {
+	LogFile        string `json:"log_file"`
 	ListeningPort  string `json:"listening_port"`
 	TargetUrl      string `json:"target_url"`
 	RoutingOptions []struct {
@@ -45,6 +46,8 @@ type Handler interface {
 // config. All traffic will be routed to the target URL. Any custom
 // headers or metod types will be handled
 func StartProxy(p *Proxy) error {
+
+	p.HandleLogging()
 
 	// Handle the custom routing options
 	for _, route := range p.RoutingOptions {
@@ -200,4 +203,13 @@ func ValidateMethod(method string) error {
 	}
 
 	return fmt.Errorf("Method type %s is not allowed", method)
+}
+
+func (p *Proxy) HandleLogging() error {
+	f, err := os.OpenFile(p.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+	log.SetOutput(f)
+	return nil
 }

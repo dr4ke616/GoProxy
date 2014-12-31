@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# APP="/etc/GoProxy/GoProxy"
+APP="./GoProxy"
+
+function is_running() {
+    return $(ps ax | grep -v grep | grep GoProxy > /dev/null)
+}
+
+function start {
+    if is_running
+    then
+        echo "GoProxy already running"
+        exit 1
+    fi
+
+    echo "Starting GoProxy"
+    $APP &
+}
+
+function stop {
+    if ! is_running
+    then
+        echo "GoProxy is not running"
+        exit 1
+    fi
+
+    echo "Stopping GoProxy"
+    sudo kill $(ps -ceo pid=,comm= | awk '/GoProxy/ { print $1; exit }')
+}
+
+function status {
+    if is_running
+    then
+        echo "GoProxy is running"
+    else
+        echo "GoProxy is not running"
+    fi
+    exit 1
+}
+
+function echo_usage {
+    echo "GoProxy service."
+    echo $"Usage $0 {start|stop}"
+    exit 1
+}
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        stop
+        sleep 1
+        start
+        ;;
+    *)
+        echo_usage
+esac
