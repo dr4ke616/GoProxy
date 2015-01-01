@@ -7,11 +7,18 @@ import (
 )
 
 func main() {
+
+	server.DEVIL = false
+
 	var err error
 	proxy := server.Proxy{}
 
 	// Load the proxy from a config file
-	err = server.LoadFromConfig(&proxy)
+	c := "/etc/goproxy/config.json"
+	if server.DEVIL {
+		c = "config.json"
+	}
+	err = server.LoadFromConfig(&proxy, c)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)

@@ -71,7 +71,7 @@ echo -e "${OK}✔${RESET}"
 echo "From here on we'll need to run as sudo..."
 sudo ls > /dev/null
 
-echo -n "Installing binaries into $DESTDIR..."
+echo -n "Installing binary into $DESTDIR..."
 sudo rm -rf $DESTDIR
 sudo mkdir $DESTDIR
 sudo mv $APP_NAME $DESTDIR
@@ -79,13 +79,12 @@ sudo cp "$CONFIG_NAME.sample" $DESTDIR/$CONFIG_NAME
 sudo cp "$CONFIG_NAME.sample" $DESTDIR/
 echo -e "${OK}✔${RESET}"
 
-echo -n "Installing start/stop script into $EXEDIR..."
-sudo rm $EXEDIR/goproxy
+echo -n "Installing start/stop script into $EXEDIR/goproxy..."
 sudo cp $SCRIPT $EXEDIR
 echo -e "${OK}✔${RESET}"
 
 echo -n "Starting $APP_NAME..."
-sudo $EXEDIR/goproxy start
+sudo $EXEDIR/goproxy start > /dev/null
 echo -e "${OK}✔${RESET}"
 
 echo ""

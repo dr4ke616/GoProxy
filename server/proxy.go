@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+var DEVIL = false
 var ALLOWED_METHODS = [4]string{"GET", "POST", "PUT", "PATCH"}
 
 // Struct to defin the config file. Represented using JSON
@@ -47,7 +48,9 @@ type Handler interface {
 // headers or metod types will be handled
 func StartProxy(p *Proxy) error {
 
-	p.HandleLogging()
+	if !DEVIL {
+		p.HandleLogging()
+	}
 
 	// Handle the custom routing options
 	for _, route := range p.RoutingOptions {
