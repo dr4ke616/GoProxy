@@ -20,6 +20,10 @@ CONFIG_NAME='config.json'
 SCRIPT='scripts/goproxy'
 
 
+function is_running() {
+    return $(ps ax | grep -v grep | grep GoProxy > /dev/null)
+}
+
 [ "$GIT" = "" ] && {
     echo "Git can't be found in your system"
     echo -ne "  ${OK}suggestion${RESET}: run '"
@@ -68,10 +72,12 @@ cd $GOPATH/src/$REPOSITORY
 $GO build
 echo -e "${OK}✔${RESET}"
 
+echo ""
 echo "From here on we'll need to run as sudo..."
 sudo ls > /dev/null
+echo ""
 
-echo -n "Installing binary into $DESTDIR..."
+echo -n "Installing binary into $DESTDIR... "
 sudo rm -rf $DESTDIR
 sudo mkdir $DESTDIR
 sudo mv $APP_NAME $DESTDIR
@@ -79,17 +85,24 @@ sudo cp "$CONFIG_NAME.sample" $DESTDIR/$CONFIG_NAME
 sudo cp "$CONFIG_NAME.sample" $DESTDIR/
 echo -e "${OK}✔${RESET}"
 
-echo -n "Installing start/stop script into $EXEDIR/goproxy..."
+echo -n "Installing start/stop script into $EXEDIR/goproxy... "
 sudo cp $SCRIPT $EXEDIR
 echo -e "${OK}✔${RESET}"
 
-echo -n "Starting $APP_NAME..."
+echo -n "Starting $APP_NAME... "
 sudo $EXEDIR/goproxy start > /dev/null
 echo -e "${OK}✔${RESET}"
 
-echo ""
-echo -e "${OK}$APP_NAME is now installed and running your system${RESET}"
-echo "You can start or stop $APP_NAME by '/etc/init.d/goproxy {start|stop|restart}'."
-echo "You can alter the config file at $DESTDIR/$CONFIG_NAME. Makeing sure to restart $APP_NAME."
-echo "$APP_NAME's source code is saved at $GOPATH/src/$REPOSITORY."
-echo ""
+if is_running
+then
+    echo ""
+    echo -e "${OK}$APP_NAME is now installed and running your system${RESET}"
+    echo "You can start or stop $APP_NAME by '/etc/init.d/goproxy {start|stop|restart}'."
+    echo "You can alter the config file at $DESTDIR/$CONFIG_NAME. Makeing sure to restart $APP_NAME."
+    echo "$APP_NAME's source code is saved at $GOPATH/src/$REPOSITORY/."
+    echo ""
+else
+    echo ""
+    echo -e "${FAIL}$APP_NAME failed to install and start${RESET}"
+    echo ""
+fi
