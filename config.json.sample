@@ -1,4 +1,5 @@
 {
+    "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
     "target_url": "http://localhost:8080",
     "routing_options": [

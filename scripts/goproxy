@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# APP="/etc/GoProxy/GoProxy"
-APP="./GoProxy"
+APP="/etc/goproxy/GoProxy"
 
 function is_running() {
     return $(ps ax | grep -v grep | grep GoProxy > /dev/null)

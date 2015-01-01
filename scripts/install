@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# tools
+GO=`which go`
+GIT=`which git`
+
+# colors
+OK="\033[32m"
+FAIL="\033[31m"
+RESET="\033[0m"
+
+# variables
+CURRDIR=`pwd`
+WORKDIR=$HOME/'.goproxy_installation'
+DESTDIR=/etc/goproxy
+EXEDIR=/etc/init.d
+REPOSITORY='github.com/dr4ke616/GoProxy'
+APP_NAME='GoProxy'
+CONFIG_NAME='config.json'
+SCRIPT='scripts/goproxy'
+
+
+[ "$GIT" = "" ] && {
+    echo "Git can't be found in your system"
+    echo -ne "  ${OK}suggestion${RESET}: run '"
+    [ x$(uname) = "xLinux" ] && {
+        [ x$(which apt-get) != "x" ] && {
+            echo "apt-get install git' to install it"
+        } || {
+            echo "yum install git' to install it"
+        }
+    } || {
+        echo "'brew install git'"
+    }
+    echo ""
+}
+
+[ "$GO" = "" ] && {
+    echo "Go can't be found in your system"
+    echo -ne "  ${OK}suggestion${RESET}: run '"
+    [ x$(uname) = "xLinux" ] && {
+        [ x$(which apt-get) != "x" ] && {
+            echo "apt-get install lang-go' to install it"
+        } || {
+            echo "yum install lang-go' to install it"
+        }
+    } || {
+        echo "Install Go from 'https://golang.org/doc/install'"
+    }
+    echo ""
+    echo "Go to 'https://golang.org/doc/install' to find out more"
+    echo ""
+}
+
+[ "$GOPATH" = "" ] && {
+    echo "Make sure you have your GoPath set correctly"
+    echo -ne "  ${OK}suggestion${RESET}: '"
+    echo "Go to 'https://golang.org/doc/install' to find out more"
+    echo ""
+}
+
+echo -n "Getting sources... "
+$GO get $REPOSITORY
+echo -e "${OK}✔${RESET}"
+
+echo -n "Building... "
+cd $GOPATH/src/$REPOSITORY
+$GO build
+echo -e "${OK}✔${RESET}"
+
+echo "From here on we'll need to run as sudo..."
+sudo ls > /dev/null
+
+echo -n "Installing binaries into $DESTDIR..."
+sudo rm -rf $DESTDIR
+sudo mkdir $DESTDIR
+sudo mv $APP_NAME $DESTDIR
+sudo cp "$CONFIG_NAME.sample" $DESTDIR/$CONFIG_NAME
+sudo cp "$CONFIG_NAME.sample" $DESTDIR/
+echo -e "${OK}✔${RESET}"
+
+echo -n "Installing start/stop script into $EXEDIR..."
+sudo rm $EXEDIR/goproxy
+sudo cp $SCRIPT $EXEDIR
+echo -e "${OK}✔${RESET}"
+
+echo -n "Starting $APP_NAME..."
+sudo $EXEDIR/goproxy start
+echo -e "${OK}✔${RESET}"
+
+echo ""
+echo -e "${OK}$APP_NAME is now installed and running your system${RESET}"
+echo "You can start or stop $APP_NAME by '/etc/init.d/goproxy {start|stop|restart}'."
+echo "You can alter the config file at $DESTDIR/$CONFIG_NAME. Makeing sure to restart $APP_NAME."
+echo "$APP_NAME's source code is saved at $GOPATH/src/$REPOSITORY."
+echo ""
