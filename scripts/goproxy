@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# colors
+OK="\033[32m"
+FAIL="\033[31m"
+RESET="\033[0m"
+
+# variables
 APP="/etc/goproxy/GoProxy"
 
 function is_running() {
@@ -13,8 +19,9 @@ function start {
         exit 1
     fi
 
-    echo "Starting GoProxy"
+    echo -n "Starting GoProxy... "
     $APP &
+    echo -e "${OK}✔${RESET}"
 }
 
 function stop {
@@ -24,16 +31,17 @@ function stop {
         exit 1
     fi
 
-    echo "Stopping GoProxy"
+    echo -n "Stopping GoProxy... "
     sudo kill $(ps -ceo pid=,comm= | awk '/GoProxy/ { print $1; exit }')
+    echo -e "${OK}✔${RESET}"
 }
 
 function status {
     if is_running
     then
-        echo "GoProxy is running"
+        echo -e "GoProxy is ${OK}running${RESET}"
     else
-        echo "GoProxy is not running"
+        echo -e "GoProxy is ${OK}not running${RESET}"
     fi
     exit 1
 }
