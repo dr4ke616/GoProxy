@@ -64,7 +64,7 @@ function is_running() {
 }
 
 echo -n "Getting sources... "
-$GO get $REPOSITORY
+$GO get -u $REPOSITORY
 echo -e "${OK}✔${RESET}"
 
 echo -n "Building... "
