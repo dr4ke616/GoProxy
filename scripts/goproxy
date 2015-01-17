@@ -32,7 +32,7 @@ function stop {
     fi
 
     echo -n "Stopping GoProxy... "
-    sudo kill $(ps -ceo pid=,comm= | awk '/GoProxy/ { print $1; exit }')
+    sudo kill $(ps ceo pid=,comm= | awk '/GoProxy/ { print $1; exit }')
     echo -e "${OK}✔${RESET}"
 }
 
