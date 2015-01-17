@@ -32,15 +32,10 @@ type CustomHeader struct {
 }
 
 // Struct defining the rules for the route handeling
-type RouteHandler struct {
+type CustomHandler struct {
 	FromMethod, ToMethod string
 	CustomHeaders        []CustomHeader
-	Proxy                *Proxy
-}
-
-// HTTP interface to be overloaded
-type Handler interface {
-	ServeHTTP(http.ResponseWriter, *http.Request)
+	Active               bool
 }
 
 // Start a proxy webserver, listening on the port specified in the
@@ -52,35 +47,7 @@ func StartProxy(p *Proxy) error {
 		p.HandleLogging()
 	}
 
-	// Handle the custom routing options
-	for _, route := range p.RoutingOptions {
-		var err error
-
-		if err = ValidateMethod(route.FromMethod); err != nil {
-			return err
-		}
-
-		if err = ValidateMethod(route.ToMethod); err != nil {
-			return err
-		}
-
-		log.Println("Adding custom handler for URI", route.URI)
-		handler := RouteHandler{
-			FromMethod:    route.FromMethod,
-			ToMethod:      route.ToMethod,
-			CustomHeaders: route.CustomHeaders,
-			Proxy:         p,
-		}
-		http.Handle(route.URI, Handler(handler))
-	}
-
-	// Handle the default root url handler
-	http.Handle("/", Handler(RouteHandler{
-		FromMethod:    "",
-		ToMethod:      "",
-		CustomHeaders: nil,
-		Proxy:         p,
-	}))
+	http.HandleFunc("/", p.ServeHTTP)
 
 	// Lets Go...
 	log.Println("Starting GO proxyserver on port", p.ListeningPort)
@@ -92,14 +59,23 @@ func StartProxy(p *Proxy) error {
 }
 
 // Handle the incomeing requests and re-route to the target
-func (h RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	h.HandleCustomMethod(r)
+	full_url := p.TargetUrl + r.RequestURI
+	log.Println(r.Method + ": " + full_url)
 
-	uri := h.Proxy.TargetUrl + r.RequestURI
-	log.Println(r.Method + ": " + uri)
+	custom_handler := CustomHandler{Active: false}
+	p.InitCustomHandler(r, &custom_handler)
+	if custom_handler.Active {
+		log.Println("Handeling custom route for", full_url)
+	}
 
-	remote_request, err := CreateRemoteRequest(r, uri)
+	if err := HandleCustomMethod(r, &custom_handler); err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	remote_request, err := CreateRemoteRequest(r, full_url)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -123,26 +99,67 @@ func (h RouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	destination_header := w.Header()
 	CopyHeader(resp.Header, &destination_header)
 	destination_header.Add("Requested-Host", remote_request.Host)
-	h.HandleCustomHeaders(&destination_header)
+	HandleCustomHeaders(&destination_header, &custom_handler)
 	w.Write(body)
 }
 
-// Switches the method type as specified in the config
-func (h RouteHandler) HandleCustomMethod(r *http.Request) {
+func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
 
-	if h.FromMethod == "" || h.ToMethod == "" {
-		return
-	}
+	for _, route := range p.RoutingOptions {
+		uri := r.RequestURI
 
-	if r.Method == h.FromMethod {
-		r.Method = h.ToMethod
+		route.URI = strings.Split(route.URI, "?")[0]
+		s := strings.Split(uri, "?")
+		if len(s) > 1 {
+			// params := s[1]
+			uri = s[0]
+		}
+
+		if uri == route.URI {
+			c.FromMethod = route.FromMethod
+			c.ToMethod = route.ToMethod
+			c.CustomHeaders = route.CustomHeaders
+			c.Active = true
+			return
+		}
 	}
 }
 
-// Handles any custom headers that are specified in the config
-func (h RouteHandler) HandleCustomHeaders(destination_header *http.Header) {
+// Switches the method type as specified in the config
+func HandleCustomMethod(r *http.Request, c *CustomHandler) error {
 
-	for _, header := range h.CustomHeaders {
+	if !c.Active {
+		return nil
+	}
+
+	var err error
+
+	if err = ValidateMethod(c.FromMethod); err != nil {
+		return err
+	}
+
+	if err = ValidateMethod(c.ToMethod); err != nil {
+		return err
+	}
+
+	if c.FromMethod == "" || c.ToMethod == "" {
+		return nil
+	}
+
+	if r.Method == c.FromMethod {
+		r.Method = c.ToMethod
+	}
+	return nil
+}
+
+// Handles any custom headers that are specified in the config
+func HandleCustomHeaders(destination_header *http.Header, c *CustomHandler) {
+
+	if !c.Active {
+		return
+	}
+
+	for _, header := range c.CustomHeaders {
 		if header.Replace {
 			// When we replace we remove the old header and add the new one
 			destination_header.Set(header.HeaderKey, strings.Join(header.HeaderValues, ", "))
