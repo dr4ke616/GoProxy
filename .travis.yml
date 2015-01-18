@@ -9,3 +9,6 @@ install:
     - go get github.com/onsi/gomega
     - go install github.com/onsi/ginkgo/ginkgo
     - export PATH=$PATH:$HOME/gopath/bin
+
+script:
+    make test
