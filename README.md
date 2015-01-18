@@ -89,3 +89,6 @@ For example, say the target host has a header of `Content-Type: text/plain`. Whe
 
 ## Logs
 If you wish to view GoProxy's log, the logs can be found at `/var/log/goproxy.log`. The logs location can be changed in the config file by setting the `log_file` value.
+
+## Tests
+If you wish to run the tests use the makefile provided by running `make test`
