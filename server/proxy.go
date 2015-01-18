@@ -70,28 +70,24 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := HandleCustomMethod(r, &custom_handler); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	remote_request, err := CreateRemoteRequest(r, full_url)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		panic(err)
 	}
 	CopyHeader(r.Header, &remote_request.Header)
 
 	resp, err := Query(remote_request)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		panic(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ReadBody(resp)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Build the headers to be sent to the client
