@@ -1,0 +1,37 @@
+{
+    "log_file": "goproxy.log",
+    "listening_port": "9090",
+    "target_url": "http://localhost:14200",
+    "routing_options": [
+        {
+            "uri": "/testendpoint1/",
+            "from_method": "GET",
+            "to_method": "POST",
+            "custom_headers": []
+        },
+        {
+            "uri": "/testendpoint2/",
+            "from_method": "GET",
+            "to_method": "GET",
+            "custom_headers": [
+                {
+                    "replace": false,
+                    "header_key": "Content-Type",
+                    "header_values": ["application/json", "text/plain"]
+                }
+            ]
+        },
+        {
+            "uri": "/testendpoint3/",
+            "from_method": "POST",
+            "to_method": "GET",
+            "custom_headers": [
+                {
+                    "replace": true,
+                    "header_key": "Content-Type",
+                    "header_values": ["application/json", "text/plain"]
+                }
+            ]
+        }
+    ]
+}

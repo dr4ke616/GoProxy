@@ -100,6 +100,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	CopyHeader(resp.Header, &destination_header)
 	destination_header.Add("Requested-Host", remote_request.Host)
 	HandleCustomHeaders(&destination_header, &custom_handler)
+
+	w.WriteHeader(resp.StatusCode)
 	w.Write(body)
 }
 
