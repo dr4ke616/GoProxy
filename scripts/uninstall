@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# colors
+OK="\033[32m"
+FAIL="\033[31m"
+RESET="\033[0m"
+
+APP_NAME='GoProxy'
+DESTDIR=/etc/goproxy/
+EXEDIR=/etc/init.d/goproxy
+REPOSITORY='github.com/dr4ke616/GoProxy'
+
+
+function is_running() {
+    return $(ps ax | grep -v grep | grep GoProxy > /dev/null)
+}
+
+echo ""
+echo "You will need to run as sudo..."
+sudo ls > /dev/null
+echo ""
+
+if is_running
+then
+    sudo $EXEDIR stop
+fi
+
+echo -n "Removing binaries... "
+sudo rm -rf $DESTDIR
+echo -e "${OK}✔${RESET}"
+
+echo -n "Removing scripts... "
+sudo rm $EXEDIR
+echo -e "${OK}✔${RESET}"
+
+
+echo ""
+echo -e "${OK}$APP_NAME is now removed your system${RESET}"
+echo ""
