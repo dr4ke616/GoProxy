@@ -48,7 +48,7 @@ function status {
 
 function echo_usage {
     echo "GoProxy service."
-    echo $"Usage $0 {start|stop}"
+    echo $"Usage $0 {start|stop|restart|status}"
     exit 1
 }
 
