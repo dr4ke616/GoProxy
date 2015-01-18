@@ -34,7 +34,7 @@ The default config file will as follows:
 {
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
-    "target_url": "http://localhost:8080",
+    "target_url": "http://stackoverflow.com",
     "routing_options": []
 }
 ```
@@ -47,7 +47,7 @@ GoProxy also supports some custom routing options. You can alter the method type
 {
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
-    "target_url": "http://localhost:8080",
+    "target_url": "http://stackoverflow.com",
     "routing_options": [
         {
             "uri": "/some-endpoint/",
@@ -65,7 +65,7 @@ Go Proxy will also try to edit the headers in the request and the response to th
 {
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
-    "target_url": "http://localhost:8080",
+    "target_url": "http://stackoverflow.com",
     "routing_options": [
         {
             "uri": "/some-endpoint/",

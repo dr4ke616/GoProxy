@@ -1,6 +1,6 @@
 {
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
-    "target_url": "http://localhost:8080",
+    "target_url": "http://stackoverflow.com",
     "routing_options": []
 }
