@@ -1,0 +1,11 @@
+language: go
+
+go:
+  - 1.3
+  - tip
+
+install:
+    - go get -d -v ./... && go build -v ./...
+    - go get github.com/onsi/gomega
+    - go install github.com/onsi/ginkgo/ginkgo
+    - export PATH=$PATH:$HOME/gopath/bin
