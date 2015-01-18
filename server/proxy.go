@@ -62,7 +62,6 @@ func StartProxy(p *Proxy) error {
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	full_url := p.TargetUrl + r.RequestURI
-	log.Println(r.Method + ": " + full_url)
 
 	custom_handler := CustomHandler{Active: false}
 	p.InitCustomHandler(r, &custom_handler)
@@ -103,6 +102,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	w.Write(body)
+
+	log.Println(r.Method + ": " + full_url)
 }
 
 func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
