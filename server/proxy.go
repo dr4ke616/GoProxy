@@ -23,6 +23,7 @@ type Proxy struct {
 		ToMethod      string         `json:"to_method"`
 		CustomHeaders []CustomHeader `json:"custom_headers"`
 	} `json:"routing_options"`
+	Transport http.Transport
 }
 
 type CustomHeader struct {
@@ -79,7 +80,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	CopyHeader(r.Header, &remote_request.Header)
 
-	resp, err := Query(remote_request)
+	resp, err := p.Query(remote_request)
 	if err != nil {
 		panic(err)
 	}
@@ -122,6 +123,16 @@ func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
 			return
 		}
 	}
+}
+
+// Create a client and query the target
+func (p *Proxy) Query(r *http.Request) (*http.Response, error) {
+
+	resp, err := p.Transport.RoundTrip(r)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 // Switches the method type as specified in the config
@@ -179,17 +190,6 @@ func CreateRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
 		return nil, err
 	}
 	return rr, nil
-}
-
-// Create a client and query the target
-func Query(r *http.Request) (*http.Response, error) {
-
-	var transport http.Transport
-	resp, err := transport.RoundTrip(r)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
 }
 
 // Reads the body from the target endpoint
