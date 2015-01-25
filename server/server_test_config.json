@@ -7,12 +7,14 @@
             "uri": "/testendpoint1/",
             "from_method": "GET",
             "to_method": "POST",
+            "copy_paramaters": false,
             "custom_headers": []
         },
         {
             "uri": "/testendpoint2/",
             "from_method": "GET",
             "to_method": "GET",
+            "copy_paramaters": false,
             "custom_headers": [
                 {
                     "replace": false,
@@ -25,11 +27,25 @@
             "uri": "/testendpoint3/",
             "from_method": "POST",
             "to_method": "GET",
+            "copy_paramaters": false,
             "custom_headers": [
                 {
                     "replace": true,
                     "header_key": "Content-Type",
                     "header_values": ["application/json", "text/plain"]
+                }
+            ]
+        },
+        {
+            "uri": "/testendpoint4/query",
+            "from_method": "GET",
+            "to_method": "POST",
+            "copy_paramaters": true,
+            "custom_headers": [
+                {
+                    "replace": true,
+                    "header_key": "Content-Type",
+                    "header_values": ["application/json"]
                 }
             ]
         }

@@ -43,7 +43,6 @@ type CustomHandler struct {
 	Active               bool
 	CopyParamaters       bool
 	Paramaters           map[string][]string
-	Body                 string
 }
 
 // Start a proxy webserver, listening on the port specified in the
@@ -198,7 +197,7 @@ func CopyParamaters(r *http.Request, c *CustomHandler) {
 					return
 				}
 				if h == "application/x-www-form-urlencoded" {
-					handleXWWWForm(r, c)
+					handleApplicationForm(r, c)
 					return
 				}
 			}
@@ -215,11 +214,11 @@ func handleApplicationJson(r *http.Request, c *CustomHandler) {
 }
 
 func handleApplicationXML(r *http.Request, c *CustomHandler) {
-	log.Println("Not Implemented: copying paramaters for application/xml not implemented yet.")
+	log.Println("Warnng! Not Implemented: copying paramaters for application/xml not implemented yet.")
 }
 
-func handleXWWWForm(r *http.Request, c *CustomHandler) {
-	log.Println("Not Implemented: copying paramaters for application/x-www-form-urlencoded not implemented yet.")
+func handleApplicationForm(r *http.Request, c *CustomHandler) {
+	log.Println("Warnng! Not Implemented: copying paramaters for application/x-www-form-urlencoded not implemented yet.")
 }
 
 // Handles any custom headers that are specified in the config

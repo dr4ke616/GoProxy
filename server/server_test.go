@@ -1,7 +1,9 @@
 package server_test
 
 import (
+	// "encoding/json"
 	"github.com/dr4ke616/GoProxy/server"
+	// "io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -42,6 +44,7 @@ func startTestServer() {
 		mux.HandleFunc("/testendpoint1/", getTestHandler(200))
 		mux.HandleFunc("/testendpoint2/", getTestHandler(200))
 		mux.HandleFunc("/testendpoint3/", getTestHandler(200))
+		mux.HandleFunc("/testendpoint4/query", getTestHandler(200))
 		mux.HandleFunc("/doesnt/exist", getTestHandler(404))
 
 		log.Println(http.ListenAndServe("localhost:14200", mux))
@@ -84,8 +87,8 @@ var _ = Describe("Server", func() {
 
 		Context("Now we validate our routing options", func() {
 
-			It("Should contain three routing option", func() {
-				Expect(len(p.RoutingOptions)).To(Equal(3))
+			It("Should contain four routing option", func() {
+				Expect(len(p.RoutingOptions)).To(Equal(4))
 			})
 		})
 
@@ -177,6 +180,50 @@ var _ = Describe("Server", func() {
 				method := req.Method
 				Expect(method).To(Equal("GET"))
 			})
+
+			It("Should not error", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("On the 4th routing option - test copy params to a JSON body", func() {
+
+			uri := p.RoutingOptions[3].URI + "?param1=foo&param2=10"
+			req, err := http.NewRequest("GET", p.TargetUrl+uri, nil)
+			req.RequestURI = uri
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, req)
+
+			It("Should copy paramaters flag in config is true", func() {
+				Expect(p.RoutingOptions[3].CopyParamaters).To(BeTrue())
+			})
+
+			It("Should accept connections from custom endpoint", func() {
+				Expect(w.Code).To(Equal(200))
+			})
+
+			It("Checking the headers. This context will replace the header key", func() {
+				contentType := w.Header().Get("Content-Type")
+				Expect(contentType).To(Equal("application/json"))
+			})
+
+			It("Should contain the GET method type", func() {
+				method := req.Method
+				Expect(method).To(Equal("POST"))
+			})
+
+			// type JSONBody struct {
+			// 	Param1 [1]string `json:"param1"`
+			// 	Param2 [1]int    `json:"param2"`
+			// }
+			// jsonBody := &JSONBody{}
+			// body, err := ioutil.ReadAll(req.Body)
+			// log.Println(body)
+			// err = json.Unmarshal(body, &jsonBody)
+
+			// It("Should contain a JSON encoded body", func() {
+			// 	Expect(jsonBody.Param1).To(Equal([1]string{"foo"}))
+			// })
 
 			It("Should not error", func() {
 				Expect(err).NotTo(HaveOccurred())
