@@ -1,10 +1,13 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -18,10 +21,11 @@ type Proxy struct {
 	ListeningPort  string `json:"listening_port"`
 	TargetUrl      string `json:"target_url"`
 	RoutingOptions []struct {
-		URI           string         `json:"uri"`
-		FromMethod    string         `json:"from_method"`
-		ToMethod      string         `json:"to_method"`
-		CustomHeaders []CustomHeader `json:"custom_headers"`
+		URI            string         `json:"uri"`
+		FromMethod     string         `json:"from_method"`
+		ToMethod       string         `json:"to_method"`
+		CopyParamaters bool           `json:"copy_paramaters"`
+		CustomHeaders  []CustomHeader `json:"custom_headers"`
 	} `json:"routing_options"`
 	Transport http.Transport
 }
@@ -37,6 +41,9 @@ type CustomHandler struct {
 	FromMethod, ToMethod string
 	CustomHeaders        []CustomHeader
 	Active               bool
+	CopyParamaters       bool
+	Paramaters           map[string][]string
+	Body                 string
 }
 
 // Start a proxy webserver, listening on the port specified in the
@@ -62,10 +69,10 @@ func StartProxy(p *Proxy) error {
 // Handle the incomeing requests and re-route to the target
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	full_url := p.TargetUrl + r.RequestURI
-
 	custom_handler := CustomHandler{Active: false}
 	p.InitCustomHandler(r, &custom_handler)
+	full_url := p.TargetUrl + r.RequestURI
+
 	if custom_handler.Active {
 		log.Println("Handeling custom route for", full_url)
 	}
@@ -74,6 +81,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	CopyParamaters(r, &custom_handler)
 	remote_request, err := CreateRemoteRequest(r, full_url)
 	if err != nil {
 		panic(err)
@@ -106,18 +114,22 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
 
 	for _, route := range p.RoutingOptions {
-		uri := r.RequestURI
-
+		var err error
+		uri, err := url.Parse(p.TargetUrl + r.RequestURI)
+		params, err := url.ParseQuery(uri.RawQuery)
 		route.URI = strings.Split(route.URI, "?")[0]
-		s := strings.Split(uri, "?")
-		if len(s) > 1 {
-			// params := s[1]
-			uri = s[0]
-		}
+		path := uri.Path
 
-		if uri == route.URI {
+		if err != nil {
+			panic(err)
+		}
+		// r.RequestURI = uri
+
+		if path == route.URI {
 			c.FromMethod = route.FromMethod
 			c.ToMethod = route.ToMethod
+			c.CopyParamaters = route.CopyParamaters
+			c.Paramaters = params
 			c.CustomHeaders = route.CustomHeaders
 			c.Active = true
 			return
@@ -160,6 +172,54 @@ func HandleCustomMethod(r *http.Request, c *CustomHandler) error {
 		r.Method = c.ToMethod
 	}
 	return nil
+}
+
+func CopyParamaters(r *http.Request, c *CustomHandler) {
+	var bodyMethods = [3]string{"POST", "PUT", "PATCH"}
+
+	if !c.Active || !c.CopyParamaters {
+		return
+	}
+
+	for _, customHeader := range c.CustomHeaders {
+		for _, m := range bodyMethods {
+			if r.Method != m {
+				continue
+			}
+
+			for _, h := range customHeader.HeaderValues {
+				h := strings.ToLower(h)
+				if h == "application/json" {
+					handleApplicationJson(r, c)
+					return
+				}
+				if h == "application/xml" {
+					handleApplicationXML(r, c)
+					return
+				}
+				if h == "application/x-www-form-urlencoded" {
+					handleXWWWForm(r, c)
+					return
+				}
+			}
+		}
+	}
+}
+
+func handleApplicationJson(r *http.Request, c *CustomHandler) {
+	jsonString, err := json.Marshal(c.Paramaters)
+	if err != nil {
+		panic(err)
+	}
+	r.Body = ioutil.NopCloser(bytes.NewReader(jsonString))
+}
+
+func handleApplicationXML(r *http.Request, c *CustomHandler) {
+	log.Println("Not Implemented: copying paramaters for application/xml not implemented yet.")
+}
+
+func handleXWWWForm(r *http.Request, c *CustomHandler) {
+	log.Println("Not Implemented: copying paramaters for application/x-www-form-urlencoded not implemented yet.")
 }
 
 // Handles any custom headers that are specified in the config
