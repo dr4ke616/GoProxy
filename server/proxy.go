@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -112,25 +113,28 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
 
-	for _, route := range p.RoutingOptions {
+	for _, customRoute := range p.RoutingOptions {
 		var err error
-		uri, err := url.Parse(p.TargetUrl + r.RequestURI)
-		params, err := url.ParseQuery(uri.RawQuery)
-		route.URI = strings.Split(route.URI, "?")[0]
-		path := uri.Path
+		targetEndpoint, err := url.Parse(p.TargetUrl + r.RequestURI)
+		params, err := url.ParseQuery(targetEndpoint.RawQuery)
+		customRoute.URI = strings.Split(customRoute.URI, "?")[0]
 
 		if err != nil {
 			panic(err)
 		}
-		// r.RequestURI = uri
 
-		if path == route.URI {
-			c.FromMethod = route.FromMethod
-			c.ToMethod = route.ToMethod
-			c.CopyParamaters = route.CopyParamaters
+		if targetEndpoint.Path == customRoute.URI {
+			c.FromMethod = customRoute.FromMethod
+			c.ToMethod = customRoute.ToMethod
+			c.CopyParamaters = customRoute.CopyParamaters
 			c.Paramaters = params
-			c.CustomHeaders = route.CustomHeaders
+			c.CustomHeaders = customRoute.CustomHeaders
 			c.Active = true
+
+			// We remove the tailing paramaters if any, we handle them else where
+			if c.CopyParamaters {
+				r.RequestURI = targetEndpoint.Path
+			}
 			return
 		}
 	}
@@ -206,10 +210,28 @@ func CopyParamaters(r *http.Request, c *CustomHandler) {
 }
 
 func handleApplicationJson(r *http.Request, c *CustomHandler) {
-	jsonString, err := json.Marshal(c.Paramaters)
+
+	params := make(map[string]interface{}, len(c.Paramaters))
+	for k, v := range c.Paramaters {
+		if len(v) == 1 {
+			if _, err := strconv.Atoi(v[0]); err == nil {
+				i, _ := strconv.ParseInt(v[0], 0, 64)
+				// Its an int, so lets set it
+				params[k] = i
+			} else {
+				params[k] = v[0]
+			}
+		} else {
+			params[k] = v
+		}
+	}
+	log.Println(params)
+
+	jsonString, err := json.Marshal(params)
 	if err != nil {
 		panic(err)
 	}
+	log.Println(string(jsonString))
 	r.Body = ioutil.NopCloser(bytes.NewReader(jsonString))
 }
 
