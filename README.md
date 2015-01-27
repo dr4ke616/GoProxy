@@ -51,8 +51,8 @@ GoProxy also supports some custom routing options. You can alter the method type
     "routing_options": [
         {
             "uri": "/some-endpoint/",
-            "from_method": "GET",
             "to_method": "POST",
+            "copy_paramaters": false,
             "custom_headers": []
         }
     ]
@@ -69,8 +69,8 @@ Go Proxy will also try to edit the headers in the request and the response to th
     "routing_options": [
         {
             "uri": "/some-endpoint/",
-            "from_method": "GET",
             "to_method": "POST",
+            "copy_paramaters": true,
             "custom_headers": [
                 {
                     "replace": false,
@@ -87,8 +87,26 @@ The `replace` boolean when set to `false` will append on the values specified in
 
 For example, say the target host has a header of `Content-Type: text/plain`. When `replace` is set to `false`, GoProxy will try represent the headers as `Content-Type: text/plain, application/json, application/xml`. If `replace` is set to `true`the headers will appear as `Content-Type: application/json, application/xml`, (removing the `text/plain` value).
 
+If `copy_paramaters` was set to true GoProxy will try create a request body from any data encoded onto the url based on the Content-Type. At the moment only application/json is supported. Example:
+
+If we have the URL http://host/query?foo=bar&num=1&is_true=true&copy=str1&copy=str2
+
+This will create build the following json:
+```json
+{
+    "foo": "bar",
+    "num": 1,
+    "is_true": true,
+    "copy": ["str1", "str2"],
+},
+```
+
 ## Logs
 If you wish to view GoProxy's log, the logs can be found at `/var/log/goproxy.log`. The logs location can be changed in the config file by setting the `log_file` value.
 
 ## Tests
 If you wish to run the tests use the makefile provided by running `make test`
+
+## TODO
+- Copy Paramaters to support application/xml, application/x-www-form-urlencoded
+- SSL
