@@ -44,6 +44,18 @@
                     "header_values": ["application/json"]
                 }
             ]
+        },
+        {
+            "uri": "/testendpoint5/query",
+            "to_method": "POST",
+            "copy_paramaters": true,
+            "custom_headers": [
+                {
+                    "replace": true,
+                    "header_key": "Content-Type",
+                    "header_values": ["application/x-www-form-urlencoded"]
+                }
+            ]
         }
     ]
 }

@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -247,13 +248,26 @@ func handleApplicationJson(r *http.Request, c *CustomHandler) error {
 	return nil
 }
 
+type nopCloser struct {
+	io.Reader
+}
+
+func (nopCloser) Close() error { return nil }
+
 func handleApplicationXML(r *http.Request, c *CustomHandler) error {
 	log.Println("Warnng! Not Implemented: copying paramaters for application/xml not implemented yet.")
 	return nil
 }
 
 func handleApplicationForm(r *http.Request, c *CustomHandler) error {
-	log.Println("Warnng! Not Implemented: copying paramaters for application/x-www-form-urlencoded not implemented yet.")
+	params := url.Values{}
+	for k, v := range c.Paramaters {
+		for _, val := range v {
+			params.Add(k, val)
+		}
+	}
+	r.Body = nopCloser{bytes.NewBufferString(params.Encode())}
+	c.RawData = params.Encode()
 	return nil
 }
 

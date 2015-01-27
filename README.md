@@ -87,11 +87,11 @@ The `replace` boolean when set to `false` will append on the values specified in
 
 For example, say the target host has a header of `Content-Type: text/plain`. When `replace` is set to `false`, GoProxy will try represent the headers as `Content-Type: text/plain, application/json, application/xml`. If `replace` is set to `true`the headers will appear as `Content-Type: application/json, application/xml`, (removing the `text/plain` value).
 
-If `copy_paramaters` was set to true GoProxy will try create a request body from any data encoded onto the url based on the `Content-Type`. At the moment only application/json is supported. Example:
+If `copy_paramaters` was set to true GoProxy will try create a request body from any data encoded onto the url based on the `Content-Type`. At the moment only `application/json` and `application/x-www-form-urlencoded` is supported. For example:
 
 If we have the URL `http://host/query?foo=bar&num=1&is_true=true&copy=str1&copy=str2`
 
-This will build the following json:
+If `application/json` was set as the `Content-Type`, this will build the following json:
 ```json
 {
     "foo": "bar",
@@ -101,6 +101,11 @@ This will build the following json:
 }
 ```
 
+If `application/x-www-form-urlencoded` was set as the `Content-Type`, the body will be set as the following:
+```
+foo=bar&num=1&is_true=true&copy=str1&copy=str2
+```
+
 ## Logs
 If you wish to view GoProxy's log, the logs can be found at `/var/log/goproxy.log`. The logs location can be changed in the config file by setting the `log_file` value.
 
@@ -108,6 +113,6 @@ If you wish to view GoProxy's log, the logs can be found at `/var/log/goproxy.lo
 If you wish to run the tests use the makefile provided by running `make test`
 
 ## TODO
-- Copy Paramaters to support application/xml, application/x-www-form-urlencoded
+- Copy Paramaters to support application/xml
 - SSL
 - Dynamic routing options over URL

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -53,6 +54,7 @@ func startTestServer() {
 		mux.HandleFunc("/testendpoint2/", getTestHandler(200))
 		mux.HandleFunc("/testendpoint3/", getTestHandler(200))
 		mux.HandleFunc("/testendpoint4/query", getTestHandler(200))
+		mux.HandleFunc("/testendpoint5/query", getTestHandler(200))
 		mux.HandleFunc("/doesnt/exist", getTestHandler(404))
 
 		log.Println(http.ListenAndServe("localhost:14200", mux))
@@ -95,8 +97,8 @@ var _ = Describe("Server", func() {
 
 		Context("Now we validate our routing options", func() {
 
-			It("Should contain four routing option", func() {
-				Expect(len(p.RoutingOptions)).To(Equal(4))
+			It("Should contain five routing option", func() {
+				Expect(len(p.RoutingOptions)).To(Equal(5))
 			})
 		})
 
@@ -246,6 +248,54 @@ var _ = Describe("Server", func() {
 				Expect(jsonBody.CopyString).To(Equal([2]string{"test1", "test2"}))
 				Expect(jsonBody.CopyInt).To(Equal([2]int{100, 150}))
 				Expect(jsonBody.CopyBool).To(Equal([2]bool{false, true}))
+			})
+
+			It("Should not error", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("On the 5th routing option - test copy params to a X-WWW-Form body", func() {
+
+			params :=
+				"param1=foo&param2=10&param3=false&param4=true" +
+					"&copy_string=test1&copy_string=test2" +
+					"&copy_int=100&copy_int=150&" +
+					"copy_bool=false&copy_bool=true"
+
+			uri := p.RoutingOptions[4].URI + "?" + params
+			req, err := http.NewRequest("GET", p.TargetUrl+uri, nil)
+			req.RequestURI = uri
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, req)
+
+			It("Should copy paramaters flag in config is true", func() {
+				Expect(p.RoutingOptions[3].CopyParamaters).To(BeTrue())
+			})
+
+			It("Should accept connections from custom endpoint", func() {
+				Expect(w.Code).To(Equal(200))
+			})
+
+			It("Checking the headers. This context will replace the header key", func() {
+				contentType := w.Header().Get("Content-Type")
+				Expect(contentType).To(Equal("application/x-www-form-urlencoded"))
+			})
+
+			It("Should contain the POST method type", func() {
+				method := req.Method
+				Expect(method).To(Equal("POST"))
+			})
+
+			values, err := url.ParseQuery(rawData)
+			It("Should contain a URL encoded body", func() {
+				Expect(values["param1"]).To(Equal([]string{"foo"}))
+				Expect(values["param2"]).To(Equal([]string{"10"}))
+				Expect(values["param3"]).To(Equal([]string{"false"}))
+				Expect(values["param4"]).To(Equal([]string{"true"}))
+				Expect(values["copy_string"]).To(Equal([]string{"test1", "test2"}))
+				Expect(values["copy_int"]).To(Equal([]string{"100", "150"}))
+				Expect(values["copy_bool"]).To(Equal([]string{"false", "true"}))
 			})
 
 			It("Should not error", func() {
