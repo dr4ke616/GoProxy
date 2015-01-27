@@ -91,7 +91,7 @@ If `copy_paramaters` was set to true GoProxy will try create a request body from
 
 If we have the URL `http://host/query?foo=bar&num=1&is_true=true&copy=str1&copy=str2`
 
-This will create build the following json:
+This will build the following json:
 ```json
 {
     "foo": "bar",
@@ -110,3 +110,4 @@ If you wish to run the tests use the makefile provided by running `make test`
 ## TODO
 - Copy Paramaters to support application/xml, application/x-www-form-urlencoded
 - SSL
+- Dynamic routing options over URL
