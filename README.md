@@ -98,7 +98,7 @@ This will build the following json:
     "num": 1,
     "is_true": true,
     "copy": ["str1", "str2"],
-},
+}
 ```
 
 ## Logs
