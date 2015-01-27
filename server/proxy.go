@@ -1,16 +1,18 @@
 package server
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
 var DEVIL = false
-var ALLOWED_METHODS = [4]string{"GET", "POST", "PUT", "PATCH"}
 
 // Struct to defin the config file. Represented using JSON
 type Proxy struct {
@@ -18,10 +20,11 @@ type Proxy struct {
 	ListeningPort  string `json:"listening_port"`
 	TargetUrl      string `json:"target_url"`
 	RoutingOptions []struct {
-		URI           string         `json:"uri"`
-		FromMethod    string         `json:"from_method"`
-		ToMethod      string         `json:"to_method"`
-		CustomHeaders []CustomHeader `json:"custom_headers"`
+		URI            string         `json:"uri"`
+		FromMethod     string         `json:"from_method"`
+		ToMethod       string         `json:"to_method"`
+		CopyParamaters bool           `json:"copy_paramaters"`
+		CustomHeaders  []CustomHeader `json:"custom_headers"`
 	} `json:"routing_options"`
 	Transport http.Transport
 }
@@ -37,6 +40,9 @@ type CustomHandler struct {
 	FromMethod, ToMethod string
 	CustomHeaders        []CustomHeader
 	Active               bool
+	CopyParamaters       bool
+	Paramaters           map[string][]string
+	RawData              string
 }
 
 // Start a proxy webserver, listening on the port specified in the
@@ -45,7 +51,7 @@ type CustomHandler struct {
 func StartProxy(p *Proxy) error {
 
 	if !DEVIL {
-		p.HandleLogging()
+		p.handleLogging()
 	}
 
 	http.HandleFunc("/", p.ServeHTTP)
@@ -62,71 +68,87 @@ func StartProxy(p *Proxy) error {
 // Handle the incomeing requests and re-route to the target
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	full_url := p.TargetUrl + r.RequestURI
-
 	custom_handler := CustomHandler{Active: false}
-	p.InitCustomHandler(r, &custom_handler)
-	if custom_handler.Active {
-		log.Println("Handeling custom route for", full_url)
-	}
-
-	if err := HandleCustomMethod(r, &custom_handler); err != nil {
+	if err := p.initCustomHandler(r, &custom_handler); err != nil {
 		panic(err)
 	}
 
-	remote_request, err := CreateRemoteRequest(r, full_url)
+	if err := p.copyParamaters(r, &custom_handler); err != nil {
+		panic(err)
+	}
+
+	if err := p.handleCustomMethod(r, &custom_handler); err != nil {
+		panic(err)
+	}
+
+	if err := p.logActivity(r, &custom_handler); err != nil {
+		panic(err)
+	}
+
+	full_url, err := p.fullURL(r)
 	if err != nil {
 		panic(err)
 	}
-	CopyHeader(r.Header, &remote_request.Header)
 
-	resp, err := p.Query(remote_request)
+	remote_request, err := createRemoteRequest(r, full_url.String())
+	if err != nil {
+		panic(err)
+	}
+
+	copyHeader(r.Header, &remote_request.Header)
+
+	resp, err := p.query(remote_request)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
 
-	body, err := ReadBody(resp)
+	body, err := readBody(resp)
 	if err != nil {
 		panic(err)
 	}
 
 	// Build the headers to be sent to the client
 	destination_header := w.Header()
-	CopyHeader(resp.Header, &destination_header)
+	copyHeader(resp.Header, &destination_header)
 	destination_header.Add("Requested-Host", remote_request.Host)
-	HandleCustomHeaders(&destination_header, &custom_handler)
+	handleCustomHeaders(&destination_header, &custom_handler)
 
 	w.WriteHeader(resp.StatusCode)
 	w.Write(body)
-
-	log.Println(r.Method + ": " + full_url)
 }
 
-func (p *Proxy) InitCustomHandler(r *http.Request, c *CustomHandler) {
+func (p *Proxy) fullURL(r *http.Request) (*url.URL, error) {
+	return url.Parse(p.TargetUrl + r.RequestURI)
+}
 
-	for _, route := range p.RoutingOptions {
-		uri := r.RequestURI
+func (p *Proxy) initCustomHandler(r *http.Request, c *CustomHandler) error {
 
-		route.URI = strings.Split(route.URI, "?")[0]
-		s := strings.Split(uri, "?")
-		if len(s) > 1 {
-			// params := s[1]
-			uri = s[0]
+	for _, customRoute := range p.RoutingOptions {
+		var err error
+		targetEndpoint, err := p.fullURL(r)
+		params, err := url.ParseQuery(targetEndpoint.RawQuery)
+		customRoute.URI = strings.Split(customRoute.URI, "?")[0]
+
+		if err != nil {
+			return err
 		}
 
-		if uri == route.URI {
-			c.FromMethod = route.FromMethod
-			c.ToMethod = route.ToMethod
-			c.CustomHeaders = route.CustomHeaders
+		if targetEndpoint.Path == customRoute.URI {
+			c.FromMethod = customRoute.FromMethod
+			c.ToMethod = customRoute.ToMethod
+			c.CopyParamaters = customRoute.CopyParamaters
+			c.Paramaters = params
+			c.CustomHeaders = customRoute.CustomHeaders
 			c.Active = true
-			return
+			return nil
 		}
 	}
+	return nil
 }
 
 // Create a client and query the target
-func (p *Proxy) Query(r *http.Request) (*http.Response, error) {
+func (p *Proxy) query(r *http.Request) (*http.Response, error) {
 
 	resp, err := p.Transport.RoundTrip(r)
 	if err != nil {
@@ -136,34 +158,107 @@ func (p *Proxy) Query(r *http.Request) (*http.Response, error) {
 }
 
 // Switches the method type as specified in the config
-func HandleCustomMethod(r *http.Request, c *CustomHandler) error {
+func (p *Proxy) handleCustomMethod(r *http.Request, c *CustomHandler) error {
 
-	if !c.Active {
-		return nil
-	}
-
-	var err error
-
-	if err = ValidateMethod(c.FromMethod); err != nil {
-		return err
-	}
-
-	if err = ValidateMethod(c.ToMethod); err != nil {
-		return err
-	}
-
-	if c.FromMethod == "" || c.ToMethod == "" {
-		return nil
-	}
-
-	if r.Method == c.FromMethod {
+	if c.Active {
 		r.Method = c.ToMethod
 	}
 	return nil
 }
 
+func (p *Proxy) copyParamaters(r *http.Request, c *CustomHandler) error {
+
+	if !c.Active || !c.CopyParamaters {
+		return nil
+	}
+
+	targetEndpoint, err := p.fullURL(r)
+	if err != nil {
+		return err
+	}
+
+	r.RequestURI = targetEndpoint.Path
+	for _, customHeader := range c.CustomHeaders {
+		for _, h := range customHeader.HeaderValues {
+			h := strings.ToLower(h)
+			if h == "application/json" {
+				if err := handleApplicationJson(r, c); err != nil {
+					return err
+				}
+				return nil
+			}
+			if h == "application/xml" {
+				if err := handleApplicationXML(r, c); err != nil {
+					return err
+				}
+				return nil
+			}
+			if h == "application/x-www-form-urlencoded" {
+				if err := handleApplicationForm(r, c); err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func handleApplicationJson(r *http.Request, c *CustomHandler) error {
+
+	params := make(map[string]interface{}, len(c.Paramaters))
+	for k, v := range c.Paramaters {
+
+		// First we check if its an int
+		// Then check for boolean, finally
+		// if none of them its a string
+		values := make([]interface{}, len(v))
+		for i, val := range v {
+			if _, err := strconv.Atoi(val); err == nil {
+				intval, _ := strconv.ParseInt(val, 0, 64)
+				values[i] = intval
+			} else if val == "true" {
+				values[i] = true
+			} else if val == "false" {
+				values[i] = false
+			} else {
+				values[i] = val
+			}
+		}
+
+		// If there is only one occuerance of a
+		// value, we use that one. Other wise
+		// we set the value for a given key
+		// as a list
+		if len(values) == 1 {
+			params[k] = values[0]
+		} else {
+			params[k] = values
+		}
+	}
+
+	jsonString, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	r.Body = ioutil.NopCloser(bytes.NewReader(jsonString))
+	c.RawData = string(jsonString)
+	return nil
+}
+
+func handleApplicationXML(r *http.Request, c *CustomHandler) error {
+	log.Println("Warnng! Not Implemented: copying paramaters for application/xml not implemented yet.")
+	return nil
+}
+
+func handleApplicationForm(r *http.Request, c *CustomHandler) error {
+	log.Println("Warnng! Not Implemented: copying paramaters for application/x-www-form-urlencoded not implemented yet.")
+	return nil
+}
+
 // Handles any custom headers that are specified in the config
-func HandleCustomHeaders(destination_header *http.Header, c *CustomHandler) {
+func handleCustomHeaders(destination_header *http.Header, c *CustomHandler) {
 
 	if !c.Active {
 		return
@@ -183,7 +278,7 @@ func HandleCustomHeaders(destination_header *http.Header, c *CustomHandler) {
 }
 
 // Creates the remote request object
-func CreateRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
+func createRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
 
 	rr, err := http.NewRequest(r.Method, uri, r.Body)
 	if err != nil {
@@ -193,7 +288,7 @@ func CreateRemoteRequest(r *http.Request, uri string) (*http.Request, error) {
 }
 
 // Reads the body from the target endpoint
-func ReadBody(r *http.Response) ([]byte, error) {
+func readBody(r *http.Response) ([]byte, error) {
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -203,7 +298,7 @@ func ReadBody(r *http.Response) ([]byte, error) {
 }
 
 // Used to copy headers from the target to the client
-func CopyHeader(source http.Header, dest *http.Header) {
+func copyHeader(source http.Header, dest *http.Header) {
 
 	for n, v := range source {
 		for _, vv := range v {
@@ -212,23 +307,29 @@ func CopyHeader(source http.Header, dest *http.Header) {
 	}
 }
 
-// Verify the methods are correct
-func ValidateMethod(method string) error {
-
-	for _, m := range ALLOWED_METHODS {
-		if method == m {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("Method type %s is not allowed", method)
-}
-
-func (p *Proxy) HandleLogging() error {
+func (p *Proxy) handleLogging() error {
 	f, err := os.OpenFile(p.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
 	log.SetOutput(f)
+	return nil
+}
+
+func (p *Proxy) logActivity(r *http.Request, c *CustomHandler) error {
+
+	full_url, err := p.fullURL(r)
+	if err != nil {
+		return err
+	}
+
+	if c.Active {
+		msg := "Handeling custom route for " + full_url.String()
+		if c.CopyParamaters {
+			msg += " with data " + c.RawData
+		}
+		log.Println(msg)
+	}
+	log.Println(r.Method + ": " + full_url.String())
 	return nil
 }
