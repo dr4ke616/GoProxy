@@ -87,9 +87,9 @@ The `replace` boolean when set to `false` will append on the values specified in
 
 For example, say the target host has a header of `Content-Type: text/plain`. When `replace` is set to `false`, GoProxy will try represent the headers as `Content-Type: text/plain, application/json, application/xml`. If `replace` is set to `true`the headers will appear as `Content-Type: application/json, application/xml`, (removing the `text/plain` value).
 
-If `copy_paramaters` was set to true GoProxy will try create a request body from any data encoded onto the url based on the Content-Type. At the moment only application/json is supported. Example:
+If `copy_paramaters` was set to true GoProxy will try create a request body from any data encoded onto the url based on the `Content-Type`. At the moment only application/json is supported. Example:
 
-If we have the URL http://host/query?foo=bar&num=1&is_true=true&copy=str1&copy=str2
+If we have the URL `http://host/query?foo=bar&num=1&is_true=true&copy=str1&copy=str2`
 
 This will create build the following json:
 ```json
