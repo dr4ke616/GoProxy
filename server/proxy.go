@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 )
 
 var DEVIL = false
-var ALLOWED_METHODS = [4]string{"GET", "POST", "PUT", "PATCH"}
 
 // Struct to defin the config file. Represented using JSON
 type Proxy struct {
@@ -162,30 +160,13 @@ func (p *Proxy) query(r *http.Request) (*http.Response, error) {
 // Switches the method type as specified in the config
 func (p *Proxy) handleCustomMethod(r *http.Request, c *CustomHandler) error {
 
-	if !c.Active {
-		return nil
-	}
-
-	var err error
-	if err = ValidateMethod(c.FromMethod); err != nil {
-		return err
-	}
-	if err = ValidateMethod(c.ToMethod); err != nil {
-		return err
-	}
-
-	if c.FromMethod == "" || c.ToMethod == "" {
-		return nil
-	}
-
-	if r.Method == c.FromMethod {
+	if c.Active {
 		r.Method = c.ToMethod
 	}
 	return nil
 }
 
 func (p *Proxy) copyParamaters(r *http.Request, c *CustomHandler) error {
-	var bodyMethods = [3]string{"POST", "PUT", "PATCH"}
 
 	if !c.Active || !c.CopyParamaters {
 		return nil
@@ -198,31 +179,25 @@ func (p *Proxy) copyParamaters(r *http.Request, c *CustomHandler) error {
 
 	r.RequestURI = targetEndpoint.Path
 	for _, customHeader := range c.CustomHeaders {
-		for _, m := range bodyMethods {
-			if r.Method != m {
-				continue
+		for _, h := range customHeader.HeaderValues {
+			h := strings.ToLower(h)
+			if h == "application/json" {
+				if err := handleApplicationJson(r, c); err != nil {
+					return err
+				}
+				return nil
 			}
-
-			for _, h := range customHeader.HeaderValues {
-				h := strings.ToLower(h)
-				if h == "application/json" {
-					if err := handleApplicationJson(r, c); err != nil {
-						return err
-					}
-					return nil
+			if h == "application/xml" {
+				if err := handleApplicationXML(r, c); err != nil {
+					return err
 				}
-				if h == "application/xml" {
-					if err := handleApplicationXML(r, c); err != nil {
-						return err
-					}
-					return nil
+				return nil
+			}
+			if h == "application/x-www-form-urlencoded" {
+				if err := handleApplicationForm(r, c); err != nil {
+					return err
 				}
-				if h == "application/x-www-form-urlencoded" {
-					if err := handleApplicationForm(r, c); err != nil {
-						return err
-					}
-					return nil
-				}
+				return nil
 			}
 		}
 	}
@@ -330,18 +305,6 @@ func copyHeader(source http.Header, dest *http.Header) {
 			dest.Add(n, vv)
 		}
 	}
-}
-
-// Verify the methods are correct
-func ValidateMethod(method string) error {
-
-	for _, m := range ALLOWED_METHODS {
-		if method == m {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("Method type %s is not allowed", method)
 }
 
 func (p *Proxy) handleLogging() error {

@@ -1,9 +1,9 @@
 package server_test
 
 import (
-	// "encoding/json"
+	"encoding/json"
 	"github.com/dr4ke616/GoProxy/server"
-	// "io/ioutil"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -24,12 +24,20 @@ func loadProxy(config string) (*server.Proxy, error) {
 	return &proxy, nil
 }
 
+var rawData string
+
 type testHandler func(w http.ResponseWriter, req *http.Request)
 
 func getTestHandler(code int) testHandler {
 	return func(w http.ResponseWriter, req *http.Request) {
 		header := w.Header()
 		header.Add("Content-Type", "text/plain; charset=utf-8")
+
+		b, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			panic(err)
+		}
+		rawData = string(b)
 
 		w.WriteHeader(code)
 		w.Write(nil)
@@ -188,7 +196,13 @@ var _ = Describe("Server", func() {
 
 		Context("On the 4th routing option - test copy params to a JSON body", func() {
 
-			uri := p.RoutingOptions[3].URI + "?param1=foo&param2=10"
+			params :=
+				"param1=foo&param2=10&param3=false&param4=true" +
+					"&copy_string=test1&copy_string=test2" +
+					"&copy_int=100&copy_int=150&" +
+					"copy_bool=false&copy_bool=true"
+
+			uri := p.RoutingOptions[3].URI + "?" + params
 			req, err := http.NewRequest("GET", p.TargetUrl+uri, nil)
 			req.RequestURI = uri
 			w := httptest.NewRecorder()
@@ -207,23 +221,32 @@ var _ = Describe("Server", func() {
 				Expect(contentType).To(Equal("application/json"))
 			})
 
-			It("Should contain the GET method type", func() {
+			It("Should contain the PATCH method type", func() {
 				method := req.Method
-				Expect(method).To(Equal("POST"))
+				Expect(method).To(Equal("PATCH"))
 			})
 
-			// type JSONBody struct {
-			// 	Param1 [1]string `json:"param1"`
-			// 	Param2 [1]int    `json:"param2"`
-			// }
-			// jsonBody := &JSONBody{}
-			// body, err := ioutil.ReadAll(req.Body)
-			// log.Println(body)
-			// err = json.Unmarshal(body, &jsonBody)
+			type JSONBody struct {
+				Param1     string    `json:"param1"`
+				Param2     int       `json:"param2"`
+				Param3     bool      `json:"param3"`
+				Param4     bool      `json:"param4"`
+				CopyString [2]string `json:"copy_string"`
+				CopyInt    [2]int    `json:"copy_int"`
+				CopyBool   [2]bool   `json:"copy_bool"`
+			}
+			jsonBody := &JSONBody{}
+			err = json.Unmarshal([]byte(rawData), &jsonBody)
 
-			// It("Should contain a JSON encoded body", func() {
-			// 	Expect(jsonBody.Param1).To(Equal([1]string{"foo"}))
-			// })
+			It("Should contain a JSON encoded body", func() {
+				Expect(jsonBody.Param1).To(Equal("foo"))
+				Expect(jsonBody.Param2).To(Equal(10))
+				Expect(jsonBody.Param3).To(BeFalse())
+				Expect(jsonBody.Param4).To(BeTrue())
+				Expect(jsonBody.CopyString).To(Equal([2]string{"test1", "test2"}))
+				Expect(jsonBody.CopyInt).To(Equal([2]int{100, 150}))
+				Expect(jsonBody.CopyBool).To(Equal([2]bool{false, true}))
+			})
 
 			It("Should not error", func() {
 				Expect(err).NotTo(HaveOccurred())

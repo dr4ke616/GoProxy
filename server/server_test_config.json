@@ -5,14 +5,12 @@
     "routing_options": [
         {
             "uri": "/testendpoint1/",
-            "from_method": "GET",
             "to_method": "POST",
             "copy_paramaters": false,
             "custom_headers": []
         },
         {
             "uri": "/testendpoint2/",
-            "from_method": "GET",
             "to_method": "GET",
             "copy_paramaters": false,
             "custom_headers": [
@@ -25,7 +23,6 @@
         },
         {
             "uri": "/testendpoint3/",
-            "from_method": "POST",
             "to_method": "GET",
             "copy_paramaters": false,
             "custom_headers": [
@@ -38,8 +35,7 @@
         },
         {
             "uri": "/testendpoint4/query",
-            "from_method": "GET",
-            "to_method": "POST",
+            "to_method": "PATCH",
             "copy_paramaters": true,
             "custom_headers": [
                 {
