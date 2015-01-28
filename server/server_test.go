@@ -47,7 +47,6 @@ func getTestHandler(code int) testHandler {
 
 func startTestServer() {
 	go func() {
-
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", getTestHandler(200))
 		mux.HandleFunc("/testendpoint1/", getTestHandler(200))
@@ -56,7 +55,6 @@ func startTestServer() {
 		mux.HandleFunc("/testendpoint4/query", getTestHandler(200))
 		mux.HandleFunc("/testendpoint5/query", getTestHandler(200))
 		mux.HandleFunc("/doesnt/exist", getTestHandler(404))
-
 		log.Println(http.ListenAndServe("localhost:14200", mux))
 	}()
 }
@@ -198,11 +196,10 @@ var _ = Describe("Server", func() {
 
 		Context("On the 4th routing option - test copy params to a JSON body", func() {
 
-			params :=
-				"param1=foo&param2=10&param3=false&param4=true" +
-					"&copy_string=test1&copy_string=test2" +
-					"&copy_int=100&copy_int=150&" +
-					"copy_bool=false&copy_bool=true"
+			params := "param1=foo&param2=10&param3=false&param4=true" +
+				"&copy_string=test1&copy_string=test2" +
+				"&copy_int=100&copy_int=150&" +
+				"copy_bool=false&copy_bool=true"
 
 			uri := p.RoutingOptions[3].URI + "?" + params
 			req, err := http.NewRequest("GET", p.TargetUrl+uri, nil)
@@ -257,11 +254,10 @@ var _ = Describe("Server", func() {
 
 		Context("On the 5th routing option - test copy params to a X-WWW-Form body", func() {
 
-			params :=
-				"param1=foo&param2=10&param3=false&param4=true" +
-					"&copy_string=test1&copy_string=test2" +
-					"&copy_int=100&copy_int=150&" +
-					"copy_bool=false&copy_bool=true"
+			params := "param1=foo&param2=10&param3=false&param4=true" +
+				"&copy_string=test1&copy_string=test2" +
+				"&copy_int=100&copy_int=150&" +
+				"copy_bool=false&copy_bool=true"
 
 			uri := p.RoutingOptions[4].URI + "?" + params
 			req, err := http.NewRequest("GET", p.TargetUrl+uri, nil)

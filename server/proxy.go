@@ -125,15 +125,14 @@ func (p *Proxy) fullURL(r *http.Request) (*url.URL, error) {
 
 func (p *Proxy) initCustomHandler(r *http.Request, c *CustomHandler) error {
 
-	for _, customRoute := range p.RoutingOptions {
-		var err error
-		targetEndpoint, err := p.fullURL(r)
-		params, err := url.ParseQuery(targetEndpoint.RawQuery)
-		customRoute.URI = strings.Split(customRoute.URI, "?")[0]
+	targetEndpoint, err := p.fullURL(r)
+	params, err := url.ParseQuery(targetEndpoint.RawQuery)
+	if err != nil {
+		return err
+	}
 
-		if err != nil {
-			return err
-		}
+	for _, customRoute := range p.RoutingOptions {
+		customRoute.URI = strings.Split(customRoute.URI, "?")[0]
 
 		if targetEndpoint.Path == customRoute.URI {
 			c.FromMethod = customRoute.FromMethod

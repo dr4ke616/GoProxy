@@ -114,5 +114,4 @@ If you wish to run the tests use the makefile provided by running `make test`
 
 ## TODO
 - Copy Paramaters to support application/xml
-- SSL
 - Dynamic routing options over URL
