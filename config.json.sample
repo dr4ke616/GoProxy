@@ -2,5 +2,11 @@
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
     "target_url": "http://stackoverflow.com",
+    "SSL": {
+        "active": false,
+        "key_file": "server.key",
+        "cert_file": "server.crt",
+        "listening_port": "8099"
+    },
     "routing_options": []
 }

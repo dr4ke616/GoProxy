@@ -17,9 +17,15 @@ var DEVIL = false
 
 // Struct to defin the config file. Represented using JSON
 type Proxy struct {
-	LogFile        string `json:"log_file"`
-	ListeningPort  string `json:"listening_port"`
-	TargetUrl      string `json:"target_url"`
+	LogFile       string `json:"log_file"`
+	ListeningPort string `json:"listening_port"`
+	TargetUrl     string `json:"target_url"`
+	SSL           struct {
+		Active        bool   `json:"active"`
+		KeyFile       string `json:"key_file"`
+		CertFile      string `json:"cert_file"`
+		ListeningPort string `json:"listening_port"`
+	}
 	RoutingOptions []struct {
 		URI            string         `json:"uri"`
 		FromMethod     string         `json:"from_method"`
@@ -55,11 +61,24 @@ func StartProxy(p *Proxy) error {
 		p.handleLogging()
 	}
 
-	http.HandleFunc("/", p.ServeHTTP)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", p.ServeHTTP)
+
+	// If SSL is activated we can listen on a port for HTTPS connections
+	if p.SSL.Active {
+		log.Println("Starting SSL GO proxyserver on port", p.SSL.ListeningPort)
+
+		go func() {
+			err := http.ListenAndServeTLS("127.0.0.1:"+p.SSL.ListeningPort, p.SSL.CertFile, p.SSL.KeyFile, mux)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
 
 	// Lets Go...
 	log.Println("Starting GO proxyserver on port", p.ListeningPort)
-	err := http.ListenAndServe("127.0.0.1:"+p.ListeningPort, nil)
+	err := http.ListenAndServe("127.0.0.1:"+p.ListeningPort, mux)
 	if err != nil {
 		return err
 	}
@@ -68,6 +87,8 @@ func StartProxy(p *Proxy) error {
 
 // Handle the incomeing requests and re-route to the target
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	logIncomingRequest(r)
 
 	custom_handler := CustomHandler{Active: false}
 	if err := p.initCustomHandler(r, &custom_handler); err != nil {
@@ -343,6 +364,17 @@ func (p *Proxy) logActivity(r *http.Request, c *CustomHandler) error {
 		}
 		log.Println(msg)
 	}
-	log.Println(r.Method + ": " + full_url.String())
+	log.Println("Proxy request to: [" + r.Method + "] " + full_url.String())
 	return nil
+}
+
+func logIncomingRequest(r *http.Request) {
+
+	var scheme string
+	if r.TLS != nil {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+	log.Println("Incoming request: [" + r.Method + "] " + scheme + "://" + r.Host + r.URL.String())
 }

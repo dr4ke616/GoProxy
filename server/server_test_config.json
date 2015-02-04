@@ -2,6 +2,12 @@
     "log_file": "goproxy.log",
     "listening_port": "9090",
     "target_url": "http://localhost:14200",
+    "SSL": {
+        "active": false,
+        "key_file": "server.key",
+        "cert_file": "server.crt",
+        "listening_port": "8099"
+    },
     "routing_options": [
         {
             "uri": "/testendpoint1/",
