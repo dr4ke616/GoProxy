@@ -35,12 +35,18 @@ The default config file will as follows:
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
     "target_url": "http://stackoverflow.com",
+    "SSL": {
+        "active": false,
+        "key_file": "<PATH_TO_KEY>",
+        "cert_file": "<PATH_TO_CERT>",
+        "listening_port": "8099"
+    },
     "routing_options": []
 }
 ```
 Set the `target_url` to any destination host you'd like. Then browse to `http://localhost:8088` to see if it works.
 
-#### Routing Options
+#### Static Routing Options
 GoProxy also supports some custom routing options. You can alter the method types by adding a json object to the `routing_options`array and setting the values:
 
 ```json
@@ -48,6 +54,12 @@ GoProxy also supports some custom routing options. You can alter the method type
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
     "target_url": "http://stackoverflow.com",
+    "SSL": {
+        "active": false,
+        "key_file": "<PATH_TO_KEY>",
+        "cert_file": "<PATH_TO_CERT>",
+        "listening_port": "8099"
+    },
     "routing_options": [
         {
             "uri": "/some-endpoint/",
@@ -66,6 +78,12 @@ Go Proxy will also try to edit the headers in the request and the response to th
     "log_file": "/var/log/goproxy.log",
     "listening_port": "8088",
     "target_url": "http://stackoverflow.com",
+    "SSL": {
+        "active": false,
+        "key_file": "<PATH_TO_KEY>",
+        "cert_file": "<PATH_TO_CERT>",
+        "listening_port": "8099"
+    },
     "routing_options": [
         {
             "uri": "/some-endpoint/",
@@ -104,6 +122,24 @@ If `application/json` was set as the `Content-Type`, this will build the followi
 If `application/x-www-form-urlencoded` was set as the `Content-Type`, the body will be set as the following:
 ```
 foo=bar&num=1&is_true=true&copy=str1&copy=str2
+```
+
+#### SSL
+GoProxy supports incomeing requests over HTTPS, just specify it in the config.
+
+```json
+{
+    "log_file": "/var/log/goproxy.log",
+    "listening_port": "8088",
+    "target_url": "http://stackoverflow.com",
+    "SSL": {
+        "active": true,
+        "key_file": "server.key",
+        "cert_file": "server.crt",
+        "listening_port": "8099"
+    },
+    "routing_options": []
+}
 ```
 
 ## Logs

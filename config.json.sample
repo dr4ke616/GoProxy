@@ -4,8 +4,8 @@
     "target_url": "http://stackoverflow.com",
     "SSL": {
         "active": false,
-        "key_file": "server.key",
-        "cert_file": "server.crt",
+        "key_file": "<PATH_TO_KEY>",
+        "cert_file": "<PATH_TO_CERT>",
         "listening_port": "8099"
     },
     "routing_options": []
