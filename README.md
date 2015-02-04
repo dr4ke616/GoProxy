@@ -142,6 +142,8 @@ GoProxy supports incomeing requests over HTTPS, just specify it in the config.
 }
 ```
 
+Just set the active flag to true and specify a path to the key and cert file.
+
 ## Logs
 If you wish to view GoProxy's log, the logs can be found at `/var/log/goproxy.log`. The logs location can be changed in the config file by setting the `log_file` value.
 
