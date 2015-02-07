@@ -1,3 +1,7 @@
 *.sublime-project
 config.json
 *.log
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
